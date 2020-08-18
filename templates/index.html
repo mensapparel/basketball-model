@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>NBA Predictive Modeling Using Machine Learning</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+    <style>
+        .row {
+            margin-bottom: 40px;
+        }
+
+        .row > button, .row > a {
+            width: 200px;
+        }
+
+        .btn-default {
+            margin-top: 38px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+</body>
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            teams: [
+                "MIL",
+                "BOS",
+                "MIA",
+                "TOR",
+                "PHI",
+                "IND",
+                "BRK",
+                "ORL",
+                "CHO",
+                "CHI",
+                "DET",
+                "WAS",
+                "CLE",
+                "NYK",
+                "ATL",
+                "LAL",
+                "DEN",
+                "HOU",
+                "LAC",
+                "DAL",
+                "UTA",
+                "OKC",
+                "POR",
+                "SAS",
+                "SAC",
+                "PHO",
+                "MEM",
+                "MIN",
+                "NOP",
+                "GSW",
+            ],
+            homeTeam: '',
+            awayTeam: '',
+            homeResult: '',
+            awayResult: '',
+            progress: 100,
+        },
+
+        watch: {
+            homeTeam() {
+                this.clearResults();
+            },
+
+            awayTeam() {
+                this.clearResults();
+            }
+        },
+
+        computed: {
+            homeTeamList() {
+                return this.teams.filter(team => team !== this.awayTeam);
+            },
+
+            awayTeamList() {
+                return this.teams.filter(team => team !== this.homeTeam);
+            },
+
+            homeResultLabel() {
+                return `${this.homeTeam} predicted score: ${this.homeResult}`;
+            },
+
+           awayResultLabel() {
+                return `${this.awayTeam} predicted score: ${this.awayResult}`;
+           },
+
+            progressLabel() {
+                return this.progress + '%';
+            }
+        },
+
+        methods: {
+            async getResults() {
+                const response = await axios.get(`/teams/${this.homeTeam}/vs/${this.awayTeam}`);
+
+                if (response.data.status) {
+                    this.progress = 5;
+                    await this.checkProgress();
+                }
+            },
+
+            async checkProgress() {
+                const response = await axios.get('/teams/status');
+                this.progress = response.data.current;
+
+                if (this.progress !== 100) {
+                    setTimeout(this.checkProgress, 1000);
+                } else {
+                    this.homeResult = response.data.result.home;
+                    this.awayResult = response.data.result.away;
+                }
+            },
+
+            transfer() {
+                const temp = this.homeTeam;
+                this.homeTeam = this.awayTeam;
+                this.awayTeam = temp;
+
+                this.clearResults();
+            },
+
+            clearResults() {
+                this.homeResult = '';
+                this.awayResult = '';
+            }
+        },
+
+        template: `
+            <div class="container-fluid">
+                <div class="row">
+                    <h1 class="text-center">
+                        NBA Predictive Modeling Using Machine Learning
+                    </h1>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12 col-xs-offset-0 col-md-3 col-md-offset-2">
+                        <h4>Home team</h4>
+                        <select v-model="homeTeam" class="form-control">
+                            <option disabled value="">Choose home team</option>
+                            <option v-for="team in homeTeamList" :value="team" v-html="team">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-xs-12 col-md-2 text-center">
+                        <button class="btn btn-default glyphicon glyphicon-transfer" @click="transfer" />
+                    </div>
+                    <div class="col-xs-12 col-md-3">
+                        <h4>Away team</h4>
+                        <select v-model="awayTeam" class="form-control">
+                            <option disabled value="">Choose away team</option>
+                            <option v-for="team in awayTeamList" :value="team" v-html="team">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <button
+                        :disabled="!(homeTeam && awayTeam)"
+                        class="btn btn-primary"
+                        @click="getResults">
+                        Get Result
+                    </button>
+                </div>
+                <div class="row" v-if="progress !== 100">
+                    <div class="col-md-8 col-md-offset-2 text-center">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-success"
+                                v-html="progressLabel" role="progressbar"
+                                :ariaValuenow="progress"
+                                aria-valuemin="0" aria-valuemax="100"
+                                :style="{ width: progressLabel }">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" v-if="homeResult && awayResult">
+                    <div class="col-md-3 col-md-offset-2 text-center">
+                        <h3 v-html="homeResultLabel" />
+                    </div>
+                    <div class="col-md-3 col-md-offset-2 text-center">
+                        <h3 v-html="awayResultLabel" />
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <a
+                        href="/download"
+                        download='output_multiple_season.xlsx'
+                        class="btn btn-warning">
+                        Download dataset
+                    </a><br>
+                    <div class="row">
+                        <div class="col-sm-4 col-sm-offset-4">
+                            <span>
+                                Download our training and testing dataset with
+                                over 9,000 Regular Season and Playoff NBA games.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12 col-md-8 col-md-offset-2 text-justify">
+                        <p>
+                            This model was built using SKLearn’s open source
+                            RandomForestRegressor Model. View the documentation
+                            <a href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html"
+                            >here</a>.<br>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `
+    })
+</script>
+</html>

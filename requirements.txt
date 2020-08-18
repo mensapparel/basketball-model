@@ -1,0 +1,7 @@
+flask
+pandas
+numpy
+sklearn
+lxml
+xlrd
+gunicorn
